@@ -48,9 +48,9 @@ static long screen_y = DEFAULT_HEIGHT;
 static long scl_factor;
 
 //static long bytes_per_pixel;
-GLfloat color_set[VECTREX_COLORS];
-GLfloat line_width = DEFAULT_LINEWIDTH;
-GLfloat overlay_transparency = DEFAULT_OVERLAYTRANSPARENCY;
+static GLfloat VX_color_set[VECTREX_COLORS];
+static GLfloat line_width = DEFAULT_LINEWIDTH;
+static GLfloat overlay_transparency = DEFAULT_OVERLAYTRANSPARENCY;
 
 // Global texture image info
 TextureImage g_overlay;							// Storage For One Texture
@@ -163,8 +163,8 @@ void osint_gencolors (void)
 		gcomp = c * 256 / VECTREX_COLORS;
 		bcomp = c * 256 / VECTREX_COLORS;
 
-		color_set[c] = (GLfloat)c/128;
-		if(color_set[c] > 1.0f) color_set[c] = 1.0f;
+		VX_color_set[c] = (GLfloat)c/128;
+		if(VX_color_set[c] > 1.0f) VX_color_set[c] = 1.0f;
 	}
 }
 
@@ -253,7 +253,7 @@ void osint_render (void)
 
 	// draw lines for this frame
 	for (v = 0; v < vector_draw_cnt; v++) {
-		c = color_set[vectors_draw[v].color];
+		c = VX_color_set[vectors_draw[v].color];
         
 		glColor4f( c, c, c, 0.75f );
 		glVertex3i( (int)vectors_draw[v].x0, (int)vectors_draw[v].y0, 0 );
@@ -266,7 +266,7 @@ void osint_render (void)
 	// we have to redraw points, because zero-length line doesn't get drawn
 	glBegin(GL_POINTS);
 	for (v = 0; v < vector_draw_cnt; v++) {
-		c = color_set[vectors_draw[v].color];
+		c = VX_color_set[vectors_draw[v].color];
 		glColor3f( c,c,c );
 		glVertex3i( (int)vectors_draw[v].x0, (int)vectors_draw[v].y0, 0 );
 		glVertex3i( (int)vectors_draw[v].x1, (int)vectors_draw[v].y1, 0 );

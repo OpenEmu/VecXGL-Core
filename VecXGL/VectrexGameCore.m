@@ -44,7 +44,6 @@ VectrexGameCore *g_core;
 
 @implementation VectrexGameCore
 
-
 - (id)init
 {
     if (self = [super init]) {        
