@@ -55,7 +55,7 @@ VectrexGameCore *g_core;
     return self;
 }
 
-- (BOOL)loadFileAtPath:(NSString *)path
+- (BOOL)loadFileAtPath:(NSString *)path error:(NSError **)error
 {
     romPath = path;
     osint_defaults();           //setup defaults including sound buffer
