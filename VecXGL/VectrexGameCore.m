@@ -37,6 +37,8 @@
 {
     int videoWidth, videoHeight;
     NSString *romPath;
+    NSString *overlayFile;
+    BOOL overlayIsLoaded;
 }
 @end
 
@@ -46,11 +48,13 @@ VectrexGameCore *g_core;
 
 - (id)init
 {
-    if (self = [super init]) {        
+    if (self = [super init])
+    {
         videoWidth = 330 * 2;
         videoHeight = 410 * 2;
     }
-    
+    overlayIsLoaded = NO;
+
     g_core = self;
     return self;
 }
@@ -66,7 +70,17 @@ VectrexGameCore *g_core;
 
 - (void)executeFrameSkippingFrame:(BOOL)skip
 {
-    vecx_emu ((VECTREX_MHZ / 1000) * EMU_TIMER, 0);    
+    // late init of the overlay
+
+    // check fix, has to be REloaded at each frame, i mean really ?
+    if (![overlayFile isEqualToString:@""] && !overlayIsLoaded)
+    //if (![overlayFile isEqualToString:@""] && !overlayIsLoaded)
+    {
+        load_overlay((char *)[overlayFile UTF8String]);
+        overlayIsLoaded = YES;
+    }
+
+    vecx_emu ((VECTREX_MHZ / 1000) * EMU_TIMER, 0);
     glFlush();
 }
 
@@ -81,11 +95,13 @@ VectrexGameCore *g_core;
     {
         [super startEmulation];
         vecx_reset();
-        
+
         NSFileManager *defaultFileManager = [NSFileManager defaultManager];
-        
-        if ([defaultFileManager fileExistsAtPath:[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"]]) {
-            load_overlay((char *)[[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"] UTF8String]);
+        if ([defaultFileManager fileExistsAtPath:[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"]])
+        {
+            // Too early to load overlay, the context is not ready
+            //load_overlay((char *)[[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"] UTF8String]);
+            overlayFile = [[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"];
         }
     }
 }

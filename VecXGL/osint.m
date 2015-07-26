@@ -192,7 +192,15 @@ void osint_render (void)
 	glScissor( 0, 0, width, height );
 
 	// draw overlay or clear screen if no overlay is used
-	if (g_overlay.width > 0) {
+    if (g_overlay.width > 0)
+    {
+        // create texture
+        glShadeModel(GL_SMOOTH);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
+        glClearDepth(1.0f);
+        glBindTexture(GL_TEXTURE_2D, g_overlay.texID);
+        //
+
 		GLfloat alpha = overlay_transparency;
 		glColor3f(alpha, alpha, alpha);
 		glEnable(GL_TEXTURE_2D);
@@ -343,19 +351,20 @@ void osint_btnUp(OEVectrexButton btn) {
 // load overlay and set it as current texture
 void load_overlay(char *filename)
 {
+    if (!LoadTGA(filename))				// Load The Font Texture
+    {
+        return;										// If Loading Failed, Return False
+    }
+    /*
+    //BuildFont();											// Build The Font
 
-	if (!LoadTGA(filename))				// Load The Font Texture
-	{
-		return;										// If Loading Failed, Return False
-	}
+    glShadeModel(GL_SMOOTH);								// Enable Smooth Shading
+    glClearColor(0.0f, 0.0f, 0.0f, 0.5f);					// Black Background
+    glClearDepth(1.0f);										// Depth Buffer Setup
+    glBindTexture(GL_TEXTURE_2D, g_overlay.texID);		// Select Our Font Texture
     
-	//BuildFont();											// Build The Font
-
-	glShadeModel(GL_SMOOTH);								// Enable Smooth Shading
-	glClearColor(0.0f, 0.0f, 0.0f, 0.5f);					// Black Background
-	glClearDepth(1.0f);										// Depth Buffer Setup
-	glBindTexture(GL_TEXTURE_2D, g_overlay.texID);		// Select Our Font Texture
-	//glScissor(1	,64,637,288);								// Define Scissor Region
-	
-	//return TRUE;											// Initialization Went OK
+    //glScissor(1	,64,637,288);								// Define Scissor Region
+    
+    //return TRUE;
+    */
 }
