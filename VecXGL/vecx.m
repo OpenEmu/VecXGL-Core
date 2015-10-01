@@ -9,8 +9,20 @@
 #define einline __inline
 
 unsigned char rom[8192];
-unsigned char cart[32768];
+unsigned char cart[65536];
 unsigned char ram[1024];
+extern unsigned newbankswitchOffset = 0;
+extern unsigned bankswitchOffset = 0;
+unsigned char get_cart(unsigned pos) {return cart[(pos+bankswitchOffset)%65536];}
+void set_cart(unsigned pos, unsigned char data){cart[(pos)%65536] = data;} // only loading therefor no bankswicthing!
+
+#define BS_0 0
+#define BS_1 0
+#define BS_2 0
+#define BS_3 0
+#define BS_4 0
+#define BS_5 0
+unsigned bankswitchstate = BS_0;
 
 /* the sound chip registers */
 
@@ -225,25 +237,25 @@ static long fcycles;
 
 VECXState * saveVecxState() {
 	VECXState *state = malloc(sizeof(VECXState));
-	
+
 	saveCPUState(state->cpuRegs);
-	
+
 	memcpy(state->ram, ram, sizeof(unsigned char) * 1024);
-	
+
 	memcpy(state->sndRegs, snd_regs, sizeof(unsigned) * 16);
-	
+
 	state->sndSelect = snd_select;
-	
+
 	unsigned viaRegs[] = {via_ora, via_orb, via_ddra, via_ddrb, via_t1on, via_t1int, via_t1c, via_t1ll,
         via_t1lh, via_t1pb7, via_t2on, via_t2int, via_t2c, via_t2ll, via_sr, via_srb,
         via_src, via_srclk, via_acr, via_pcr, via_ifr, via_ier, via_ca2, via_cb2h, via_cb2s};
 	memcpy(state->viaRegs, viaRegs, sizeof(unsigned) * 25);
-	
+
 	unsigned analogDevices[] = {alg_jch0, alg_jch1, alg_jch2, alg_jch3 };
-    
+
     // yes yes save states and load states are still working
     // though the format changed ...
-    
+
     memcpy(state->analogDevices, analogDevices, sizeof(unsigned) * 4);
     memcpy(state->alg_rsh, alg_rsh, sizeof(unsigned) * ALG_MAX_OFFSET);
     memcpy(state->alg_xsh, alg_xsh, sizeof(unsigned) * ALG_MAX_OFFSET);
@@ -253,40 +265,40 @@ VECXState * saveVecxState() {
     memcpy(state->sig_ramp, sig_ramp, sizeof(unsigned) * ALG_MAX_OFFSET);
     memcpy(state->sig_blank, sig_blank, sizeof(unsigned) * ALG_MAX_OFFSET);
     memcpy(state->alg_compare, alg_compare, sizeof(unsigned) * ALG_MAX_OFFSET);
-	
+
 	long analogAlg[] = {alg_curr_x, alg_curr_y};
 	memcpy(state->analogAlg, analogAlg, sizeof(long) * 2);
     memcpy(state->alg_dx, alg_dx, sizeof(long) * ALG_MAX_OFFSET);
     memcpy(state->alg_dy, alg_dy, sizeof(long) * ALG_MAX_OFFSET);
-    
-    
+
+
 	state->algVectoring = alg_vectoring;
-	
+
 	long vectorPoints[] = {alg_vector_x0, alg_vector_y0, alg_vector_x1, alg_vector_y1,
         alg_vector_dx, alg_vector_dy};
 	memcpy(state->vectorPoints, vectorPoints, sizeof(long) * 6);
-	
+
     memcpy(state->vecColor, alg_vector_color, sizeof(unsigned char) * ALG_MAX_OFFSET);
-	
+
 	long vecDrawInfo[] = {vector_draw_cnt, vector_erse_cnt};
 	memcpy(state->vecDrawInfo, vecDrawInfo, sizeof(long) * 2);
-	
+
     memcpy(state->alg_config, alg_config, sizeof(int) * ALG_SIZE);
     memcpy(state->alg_read_positions, alg_read_positions, sizeof(int) * ALG_SIZE);
     memcpy(state->alg_used_offsets, alg_used_offsets, sizeof(int) * ALG_SIZE);
-    
+
 	return state;
 }
 
 void loadVecxState(VECXState *state) {
 	loadCPUState(state->cpuRegs);
-	
+
 	memcpy(ram, state->ram, sizeof(unsigned char) * 1024);
-	
+
 	memcpy(snd_regs, state->sndRegs, sizeof(unsigned) * 16);
-	
+
 	snd_select = state->sndSelect;
-	
+
 	via_ora = (state->viaRegs)[0];
 	via_orb = (state->viaRegs)[1];
 	via_ddra = (state->viaRegs)[2];
@@ -312,7 +324,7 @@ void loadVecxState(VECXState *state) {
 	via_ca2 = (state->viaRegs)[22];
 	via_cb2h = (state->viaRegs)[23];
 	via_cb2s = (state->viaRegs)[24];
-	
+
     alg_jch0 = (state->analogDevices)[0];
     alg_jch1 = (state->analogDevices)[1];
     alg_jch2 = (state->analogDevices)[2];
@@ -320,9 +332,9 @@ void loadVecxState(VECXState *state) {
 
     alg_curr_x = (state->analogAlg)[0];
     alg_curr_y = (state->analogAlg)[1];
-    
+
     alg_vectoring = state->algVectoring;
-    
+
     alg_vector_x0 = (state->vectorPoints)[0];
     alg_vector_y0 = (state->vectorPoints)[1];
     alg_vector_x1 = (state->vectorPoints)[2];
@@ -337,7 +349,7 @@ void loadVecxState(VECXState *state) {
         alg_zsh[i] = (state->alg_zsh)[i];
         alg_jsh[i] = (state->alg_jsh)[i];
         alg_compare[i] = (state->alg_compare)[i];
-        
+
         alg_dx[i] = (state->alg_dx)[i];
         alg_dy[i] = (state->alg_dy)[i];
         sig_ramp[i] = (state->sig_ramp)[i];
@@ -349,10 +361,10 @@ void loadVecxState(VECXState *state) {
     memcpy(alg_config, state->alg_config, sizeof(int) * ALG_SIZE);
     memcpy(alg_read_positions, state->alg_read_positions, sizeof(int) * ALG_SIZE);
     memcpy(alg_used_offsets, state->alg_used_offsets, sizeof(int) * ALG_SIZE);
-    
-	
-	
-	
+
+
+
+
 	vector_draw_cnt = (state->vecDrawInfo)[0];
 	vector_erse_cnt = (state->vecDrawInfo)[1];
 }
@@ -379,7 +391,7 @@ static einline void snd_update (void)
 		break;
 	case 0x18:
 		/* the sound chip is latching an address */
-		
+
 		if ((via_ora & 0xf0) == 0x00) {
 			snd_select = via_ora & 0x0f;
 		}
@@ -523,7 +535,7 @@ unsigned char read8 (unsigned address)
 				break;
 			case 0x4:
 				/* T1 low order counter */
-				
+
 				data = (unsigned char) via_t1c;
 				via_ifr &= 0xbf; /* remove timer 1 interrupt flag */
 
@@ -597,7 +609,7 @@ unsigned char read8 (unsigned address)
 	} else if (address < 0x8000) {
 		/* cartridge */
 
-		data = cart[address];
+		data = get_cart(address);
 	} else {
 		data = 0xff;
 	}
@@ -619,10 +631,14 @@ void write8 (unsigned address, unsigned char data)
 		if (address & 0x1000) {
 			switch (address & 0xf) {
 			case 0x0:
+        if (bankswitchstate == BS_2)
+        {
+          if (data == 1) bankswitchstate = BS_3; else bankswitchstate = BS_0;
+        }
+        else bankswitchstate = BS_0;
 				via_orb = data;
 
 				snd_update ();
-
 				alg_update ();
 
 				if ((via_pcr & 0xe0) == 0x80) {
@@ -636,6 +652,11 @@ void write8 (unsigned address, unsigned char data)
 				break;
 			case 0x1:
 				/* register 1 also performs handshakes if necessary */
+        if (bankswitchstate == BS_3)
+        {
+          if (data == 0) bankswitchstate = BS_4; else bankswitchstate = BS_0;
+        }
+        else bankswitchstate = BS_0;
 
 				if ((via_pcr & 0x0e) == 0x08) {
 					/* if ca2 is in pulse mode or handshake mode, then it
@@ -663,13 +684,21 @@ void write8 (unsigned address, unsigned char data)
 				break;
 			case 0x2:
 				via_ddrb = data;
+        bankswitchstate = BS_1;
+        if (data & 0x40) newbankswitchOffset = 0; else newbankswitchOffset = 32768;
+
 				break;
 			case 0x3:
+        if (bankswitchstate == BS_1) bankswitchstate = BS_2; else bankswitchstate = BS_0;
 				via_ddra = data;
 				break;
 			case 0x4:
 				/* T1 low order counter */
-				
+        if (bankswitchstate == BS_5)
+        {
+          bankswitchOffset = newbankswitchOffset;
+          bankswitchstate = BS_0;
+        }
 				via_t1ll = data;
 
 				break;
@@ -725,6 +754,11 @@ void write8 (unsigned address, unsigned char data)
 				break;
 			case 0xb:
 				via_acr = data;
+        if (bankswitchstate == BS_4)
+        {
+          if (data == 0x98) bankswitchstate = BS_5; else bankswitchstate = BS_0;
+        }
+        else bankswitchstate = BS_0;
 				break;
 			case 0xc:
 				via_pcr = data;
@@ -814,7 +848,7 @@ void vecx_reset (void)
 	via_t1lh = 0;
 	via_t1pb7 = 0x80;
 	via_t2on = 0;
-	via_t2int = 0; 
+	via_t2int = 0;
 	via_t2c = 0;
 	via_t2ll = 0;
 	via_sr = 0;
@@ -833,8 +867,8 @@ void vecx_reset (void)
 	alg_jch1 = 128;
 	alg_jch2 = 128;
 	alg_jch3 = 128;
-    
-    
+
+
     for (int i=0; i<ALG_MAX_OFFSET; i++) {
         alg_rsh[i] = 128;
         alg_xsh[i] = 128;
@@ -843,20 +877,20 @@ void vecx_reset (void)
         alg_jsh[i] = 128;
 
         alg_compare[i] = 0; /* check this */
-        
+
         alg_dx[i] = 0;
         alg_dy[i] = 0;
- 
+
         sig_ramp[i] = 0;
         sig_blank[i] = 0;
-        
+
 //        alg_vector_color[i] = state->vecColor[i];
     }
 
-    
-    
-    
-    
+
+
+
+
 	alg_curr_x = ALG_MAX_X / 2;
 	alg_curr_y = ALG_MAX_Y / 2;
 
@@ -866,7 +900,7 @@ void vecx_reset (void)
 	vector_erse_cnt = 0;
 	vectors_draw = vectors_set;
 	vectors_erse = vectors_set + VECTOR_CNT;
-	
+
 	fcycles = FCYCLES_INIT;
 
 	e6809_read8 = read8;
@@ -1191,7 +1225,7 @@ static einline void alg_sstep (void)
 		alg_vector_x1 = alg_curr_x;
 		alg_vector_y1 = alg_curr_y;
 	}
-    
+
 }
 void alg_oneStepHead()
 {
@@ -1209,10 +1243,10 @@ void alg_oneStepHead()
     oneStepAheadUnsigned(sig_ramp, RAMP_DIRECT);
     oneStepAheadUnsigned(sig_blank, BLANK_DIRECT);
 
-    
+
     for (int i=0; i<ALG_SIZE; i++)
         alg_read_positions[i] = ((alg_read_positions[i]+1)%ALG_MAX_OFFSET);
-    
+
 }
 
 
@@ -1228,10 +1262,10 @@ void vecx_emu (long cycles, int ahead)
 			via_sstep0 ();
             alg_update ();
 			alg_sstep ();
-            
+
             alg_update ();
 			via_sstep1 ();
-            
+
             alg_oneStepHead();
 		}
 
@@ -1257,7 +1291,7 @@ void vecx_emu (long cycles, int ahead)
 			vectors_draw = tmp;
 		}
 	}
-    
+
     //Fill buffer and call core to update sound
     e8910_callback(pWave, 882);
     [g_core updateSound:pWave len:882];
