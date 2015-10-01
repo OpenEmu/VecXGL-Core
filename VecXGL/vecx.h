@@ -36,6 +36,32 @@ typedef struct vector_type {
 	unsigned char color;
 } vector_t;
 
+// Malban
+// maximum possible offset
+// offsets are "warpped"
+#define ALG_MAX_OFFSET 20
+
+// if defined you can change the
+// offset settings "on the fly" by using the buttons and joytick
+// debug info is printed to console
+//#define ALG_DEBUG
+
+#ifdef ALG_DEBUG
+void incOffset();
+void decOffset();
+void change();
+void alg_next();
+void alg_prev();
+void alg_print();
+#endif
+
+// the following 11 "flags" can be provided
+// with cycle offset
+// each has an own queue offset and queue counter
+#define ALG_SIZE 11
+enum ALG_TYPES {ZSH_DIRECT=0, Z_DIRECT, X_DIRECT, Y_DIRECT, JOY_DIRECT, COMP_DIRECT, DX_DIRECT, DY_DIRECT, COL_DIRECT, BLANK_DIRECT, RAMP_DIRECT};
+
+
 typedef struct VECXState {
 	//e6809 cpu regs
 	unsigned cpuRegs[10];
@@ -47,13 +73,32 @@ typedef struct VECXState {
 	//via 6522 regs
 	unsigned viaRegs[25];
 	//analog stuff
-	unsigned analogDevices[10];
-	long analogAlg[4];
+    unsigned analogDevices[4];
+    unsigned alg_jsh[ALG_MAX_OFFSET];
+    unsigned alg_rsh[ALG_MAX_OFFSET];
+    unsigned alg_xsh[ALG_MAX_OFFSET];
+    unsigned alg_ysh[ALG_MAX_OFFSET];
+    unsigned alg_zsh[ALG_MAX_OFFSET];
+    unsigned alg_compare[ALG_MAX_OFFSET];
+    unsigned sig_ramp[ALG_MAX_OFFSET];
+    unsigned sig_blank[ALG_MAX_OFFSET];
+    
+    long analogAlg[2];
+    long alg_dx[ALG_MAX_OFFSET];
+    long alg_dy[ALG_MAX_OFFSET];
+    
 	//vectoring stuff
 	unsigned algVectoring;
 	long vectorPoints[6];
-	unsigned char vecColor;
+    unsigned char vecColor[ALG_MAX_OFFSET];
 	long vecDrawInfo[2];
+
+
+    int alg_config[ALG_SIZE];
+    int alg_read_positions[ALG_SIZE];
+    int alg_used_offsets[ALG_SIZE];
+
+
 } VECXState;
 
 extern unsigned char ram[1024];
@@ -78,5 +123,3 @@ VECXState * saveVecxState();
 void loadVecxState(VECXState *state);
 
 #endif
-
-
