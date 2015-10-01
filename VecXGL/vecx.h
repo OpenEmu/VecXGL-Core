@@ -11,18 +11,18 @@ enum {
 
 enum {
 	VECTREX_PDECAY	= 30,      /* phosphor decay rate */
-	
+
 	/* number of 6809 cycles before a frame redraw */
-    
+
 	FCYCLES_INIT    = VECTREX_MHZ / VECTREX_PDECAY,
-    
+
 	/* max number of possible vectors that maybe on the screen at one time.
 	 * one only needs VECTREX_MHZ / VECTREX_PDECAY but we need to also store
 	 * deleted vectors in a single table
 	 */
-	
+
 	VECTOR_CNT		= VECTREX_MHZ / VECTREX_PDECAY,
-    
+
 	VECTOR_HASH     = 65521
 };
 
@@ -82,11 +82,11 @@ typedef struct VECXState {
     unsigned alg_compare[ALG_MAX_OFFSET];
     unsigned sig_ramp[ALG_MAX_OFFSET];
     unsigned sig_blank[ALG_MAX_OFFSET];
-    
+
     long analogAlg[2];
     long alg_dx[ALG_MAX_OFFSET];
     long alg_dy[ALG_MAX_OFFSET];
-    
+
 	//vectoring stuff
 	unsigned algVectoring;
 	long vectorPoints[6];
@@ -103,7 +103,9 @@ typedef struct VECXState {
 
 extern unsigned char ram[1024];
 extern unsigned char rom[8192];
-extern unsigned char cart[32768];
+
+extern unsigned char get_cart(unsigned pos);
+extern void set_cart(unsigned pos, unsigned char data); // only loading!
 
 extern unsigned snd_regs[16];
 extern unsigned alg_jch0;
