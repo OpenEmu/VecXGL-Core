@@ -75,11 +75,16 @@ void openCart(const char *romName)
 	FILE *cartfile;
 	cartname = romName;
 	cartfile = fopen (cartname, "rb");
-    
+
+  unsigned b;
+	unsigned char cart[65536];
 	if (cartfile != NULL) {
         fread (cart, 1, sizeof (cart), cartfile);
         fclose (cartfile);
-	}	
+	}
+	for ( b = 0; b < sizeof (cart); b++) {
+		set_cart(b, cart[b]);
+	}
 }
 
 
@@ -96,16 +101,16 @@ int osint_defaults (void)
 	memcpy(rom, bios_data, bios_data_size);
 
 	/* the cart is empty by default */
-	for (b = 0; b < sizeof (cart); b++) {
-		cart[b] = 0;
+	for (b = 0; b < sizeof (65536); b++) {
+		set_cart(b, 0);
 	}
-    
+
     e8910_init_sound();
-    
+
     //initialize and zero audio buffer
     pWave = malloc(882);
     memset(pWave, 0, 882);
-    
+
     g_overlay.width = 0;
 
 	return 0;
@@ -262,7 +267,7 @@ void osint_render (void)
 	// draw lines for this frame
 	for (v = 0; v < vector_draw_cnt; v++) {
 		c = VX_color_set[vectors_draw[v].color];
-        
+
 		glColor4f( c, c, c, 0.75f );
 		glVertex3i( (int)vectors_draw[v].x0, (int)vectors_draw[v].y0, 0 );
 		glVertex3i( (int)vectors_draw[v].x1, (int)vectors_draw[v].y1, 0 );
@@ -380,9 +385,9 @@ void load_overlay(char *filename)
     glClearColor(0.0f, 0.0f, 0.0f, 0.5f);					// Black Background
     glClearDepth(1.0f);										// Depth Buffer Setup
     glBindTexture(GL_TEXTURE_2D, g_overlay.texID);		// Select Our Font Texture
-    
+
     //glScissor(1	,64,637,288);								// Define Scissor Region
-    
+
     //return TRUE;
     */
 }
