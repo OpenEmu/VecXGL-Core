@@ -47,20 +47,152 @@ static unsigned via_cb2s;  /* version of cb2 controlled by the shift register */
 
 /* analog devices */
 
-static unsigned alg_rsh;  /* zero ref sample and hold */
-static unsigned alg_xsh;  /* x sample and hold */
-static unsigned alg_ysh;  /* y sample and hold */
-static unsigned alg_zsh;  /* z sample and hold */
+
+static int ALL_DIRECT  = 0;
+
+// Malban
+// some analag "registers" and 2 signals are
+// now provided with the possibilty of cycle offstes
+
+// these are "zero active" :-)
+// meaning only offsets are per default configured for: "COMP_DIRECT","DX_DIRECT","DY_DIRECT","COL_DIRECT", "RAMP_DIRECT"
+int alg_config[ALG_SIZE]            ={1,1,1,1,1,1,0,0,0,1,0};
+int alg_read_positions[ALG_SIZE]    ={0.0,0,0,0,0,0,0,0,0,0};
+int alg_used_offsets[ALG_SIZE]      ={9,9,9,9,9,9,9,9,9,9,9};
+char* alg_names[]                   ={"ZSH_DIRECT","Z_DIRECT","X_DIRECT","Y_DIRECT","JOY_DIRECT","COMP_DIRECT","DX_DIRECT","DY_DIRECT","COL_DIRECT", "BLANK_DIRECT", "RAMP_DIRECT"};
+
+// debug stuff
+#ifdef ALG_DEBUG
+int sel = 0;
+void incOffset()
+{
+    alg_used_offsets[sel]++;
+    NSLog([@"" stringByAppendingFormat: @"%s: usage %d: offset %d",alg_names[sel], alg_config[sel] ,alg_used_offsets[sel]]);
+}
+void decOffset()
+{
+    alg_used_offsets[sel]--;
+    NSLog([@"" stringByAppendingFormat: @"%s: usage %d: offset %d",alg_names[sel], alg_config[sel] ,alg_used_offsets[sel]]);
+}
+
+void alg_print()
+{
+    NSLog(@"***");
+    for (int i=0; i<ALG_SIZE; i++)
+        NSLog([@"" stringByAppendingFormat: @"%s: usage %d: offset %d",alg_names[i], alg_config[i] ,alg_used_offsets[i]]);
+    NSLog(@"***");
+}
+
+void change()
+{
+    if (alg_config[sel]==0) alg_config[sel] = 1; else alg_config[sel] = 0;
+    NSLog([@"" stringByAppendingFormat: @"%s: usage %d: offset %d",alg_names[sel], alg_config[sel] ,alg_used_offsets[sel]]);
+}
+void alg_next()
+{
+    sel = (sel+1) %ALG_SIZE;
+    NSLog([@"" stringByAppendingFormat: @"%s: usage %d: offset %d",alg_names[sel], alg_config[sel] ,alg_used_offsets[sel]]);
+}
+void alg_prev()
+{
+    sel = ((sel-1)+ALG_SIZE) %ALG_SIZE;
+    NSLog([@"" stringByAppendingFormat: @"%s: usage %d: offset %d",alg_names[sel], alg_config[sel] ,alg_used_offsets[sel]]);
+}
+#endif
+
+// looks weird
+// but once they are in place
+// one tends to make less mistakes
+//
+// write > writes tp the queue, ahead corresponding to the configured offset
+// read reads "now"
+// read direct reads the offsetted value, the value from the "future"
+#define ALG_DIRECT_READ(alg) {if ((ALL_DIRECT == 1) || (alg_config[alg] == 1)) return values[0]; return values[(alg_read_positions[alg]+(alg_used_offsets[alg]-1))%ALG_MAX_OFFSET];}
+#define ALG_READ(alg) {if ((ALL_DIRECT == 1) || (alg_config[alg] == 1)) return values[0]; return values[alg_read_positions[alg]];}
+#define ALG_WRITE(alg) {if ((ALL_DIRECT == 1) || (alg_config[alg] == 1)) values[0] = value; else values[(alg_read_positions[alg]+(alg_used_offsets[alg]-1))%ALG_MAX_OFFSET] = value;}
+#define ALG_ONE_STEP(alg) {if ((ALL_DIRECT == 1) || (alg_config[alg] == 1)) return; values[(alg_read_positions[alg]+(alg_used_offsets[alg]-1)+1)%ALG_MAX_OFFSET] = values[((alg_read_positions[alg]+(alg_used_offsets[alg]-1) ) %ALG_MAX_OFFSET)];}
+
+
+// these are all just helper functions so that the code below doesnt get to bloated
+// easier accessablity for the arrays in which the offset data is stored
+
+// one step ... each cycle the queue pointer moves one forward .-)
+void oneStepAheadUnsigned(unsigned * values, int alg) ALG_ONE_STEP(alg)
+void oneStepAheadLong(long * values, int alg) ALG_ONE_STEP(alg)
+void oneStepAheadUChar(unsigned char * values, int alg) ALG_ONE_STEP(alg)
+
+// getter and setter
+// these have the names of the old variables, only "get_" "getDirect_" or "set" in front
+unsigned getAlgDirectUnsigned(unsigned * values, int alg) ALG_DIRECT_READ(alg)
+unsigned getAlgUnsigned(unsigned * values, int alg) ALG_READ(alg)
+void setAlgUnsigned(unsigned value, unsigned * values, int alg) ALG_WRITE(alg)
+long getAlgDirectLong(long * values, int alg) ALG_DIRECT_READ(alg)
+long getAlgLong(long * values, int alg) ALG_READ(alg)
+void setAlgLong(long value, long * values, int alg) ALG_WRITE(alg)
+unsigned char getAlgDirectUChar(unsigned char * values, int alg) ALG_DIRECT_READ(alg)
+unsigned char getAlgUChar(unsigned char * values, int alg) ALG_READ(alg)
+void setAlgUChar(unsigned char value, unsigned char * values, int alg) ALG_WRITE(alg)
+
+// new
+// sigs - at least these two - are really more kind of "alg" :-)
+static unsigned sig_ramp[ALG_MAX_OFFSET];
+unsigned getDirect_sig_ramp() {return getAlgDirectUnsigned(sig_ramp, RAMP_DIRECT);}
+unsigned get_sig_ramp() {return getAlgUnsigned(sig_ramp, RAMP_DIRECT);}
+void set_sig_ramp(unsigned value) {setAlgUnsigned(value, sig_ramp, RAMP_DIRECT);}
+
+static unsigned sig_blank[ALG_MAX_OFFSET];
+unsigned getDirect_sig_blank() {return getAlgDirectUnsigned(sig_blank, BLANK_DIRECT);}
+unsigned get_sig_blank() {return getAlgUnsigned(sig_blank, BLANK_DIRECT);}
+void set_sig_blank(unsigned value) {setAlgUnsigned(value, sig_blank, BLANK_DIRECT);}
+
+//
+static unsigned alg_rsh[ALG_MAX_OFFSET];  /* zero ref sample and hold */
+unsigned getDirect_alg_rsh() {return getAlgDirectUnsigned(alg_rsh, ZSH_DIRECT);}
+unsigned get_alg_rsh() {return getAlgUnsigned(alg_rsh, ZSH_DIRECT);}
+void set_alg_rsh(unsigned value) {setAlgUnsigned(value, alg_rsh, ZSH_DIRECT);}
+
+static unsigned alg_xsh[ALG_MAX_OFFSET];  /* x sample and hold */
+unsigned getDirect_alg_xsh() {return getAlgDirectUnsigned(alg_xsh, X_DIRECT);}
+unsigned get_alg_xsh() {return getAlgUnsigned(alg_xsh, X_DIRECT);}
+void set_alg_xsh(unsigned value) {setAlgUnsigned(value, alg_xsh, X_DIRECT);}
+
+static unsigned alg_ysh[ALG_MAX_OFFSET];  /* y sample and hold */
+unsigned getDirect_alg_ysh() {return getAlgDirectUnsigned(alg_ysh, Y_DIRECT);}
+unsigned get_alg_ysh() {return getAlgUnsigned(alg_ysh, Y_DIRECT);}
+void set_alg_ysh(unsigned value) {setAlgUnsigned(value, alg_ysh, Y_DIRECT);}
+
+static unsigned alg_zsh[ALG_MAX_OFFSET];  /* z sample and hold */
+unsigned getDirect_alg_zsh() {return getAlgDirectUnsigned(alg_zsh, Z_DIRECT);}
+unsigned get_alg_zsh() {return getAlgUnsigned(alg_zsh, Z_DIRECT);}
+void set_alg_zsh(unsigned value) {setAlgUnsigned(value, alg_zsh, Z_DIRECT);}
+
+// not queued
 unsigned alg_jch0;		  /* joystick direction channel 0 */
 unsigned alg_jch1;		  /* joystick direction channel 1 */
 unsigned alg_jch2;		  /* joystick direction channel 2 */
 unsigned alg_jch3;		  /* joystick direction channel 3 */
-static unsigned alg_jsh;  /* joystick sample and hold */
 
-static unsigned alg_compare;
+static unsigned alg_jsh[ALG_MAX_OFFSET];  /* joystick sample and hold */
+unsigned getDirect_alg_jsh() {return getAlgDirectUnsigned(alg_jsh, JOY_DIRECT);}
+unsigned get_alg_jsh() {return getAlgUnsigned(alg_jsh, JOY_DIRECT);}
+void set_alg_jsh(unsigned value) {setAlgUnsigned(value, alg_jsh, JOY_DIRECT);}
 
-static long alg_dx;     /* delta x */
-static long alg_dy;     /* delta y */
+static unsigned alg_compare[ALG_MAX_OFFSET];
+unsigned getDirect_alg_compare() {return getAlgDirectUnsigned(alg_compare, COMP_DIRECT);}
+unsigned get_alg_compare() {return getAlgUnsigned(alg_compare, COMP_DIRECT);}
+void set_alg_compare(unsigned value) {setAlgUnsigned(value, alg_compare, COMP_DIRECT);}
+
+static long alg_dx[ALG_MAX_OFFSET];     /* delta x */
+long getDirect_alg_dx() {return getAlgDirectLong(alg_dx, DX_DIRECT);}
+long get_alg_dx() {return getAlgLong(alg_dx, DX_DIRECT);}
+void set_alg_dx(long value) {setAlgLong(value, alg_dx, DX_DIRECT);}
+
+static long alg_dy[ALG_MAX_OFFSET];     /* delta y */
+long getDirect_alg_dy() {return getAlgDirectLong(alg_dy, DY_DIRECT);}
+long get_alg_dy() {return getAlgLong(alg_dy, DY_DIRECT);}
+void set_alg_dy(long value) {setAlgLong(value, alg_dy, DY_DIRECT);}
+
+// not queued
 static long alg_curr_x; /* current x position */
 static long alg_curr_y; /* current y position */
 
@@ -71,7 +203,15 @@ static long alg_vector_x1;
 static long alg_vector_y1;
 static long alg_vector_dx;
 static long alg_vector_dy;
-static unsigned char alg_vector_color;
+static unsigned char alg_vector_color[ALG_MAX_OFFSET];
+unsigned char getDirect_alg_vector_color() {return getAlgDirectUChar(alg_vector_color, COL_DIRECT);}
+unsigned char get_alg_vector_color() {return getAlgUChar(alg_vector_color, COL_DIRECT);}
+void set_alg_vector_color(unsigned char value) {setAlgUChar(value, alg_vector_color, COL_DIRECT);}
+
+
+
+
+
 
 long vector_draw_cnt;
 long vector_erse_cnt;
@@ -99,24 +239,42 @@ VECXState * saveVecxState() {
         via_src, via_srclk, via_acr, via_pcr, via_ifr, via_ier, via_ca2, via_cb2h, via_cb2s};
 	memcpy(state->viaRegs, viaRegs, sizeof(unsigned) * 25);
 	
-	unsigned analogDevices[] = {alg_rsh, alg_xsh, alg_ysh, alg_zsh, alg_jch0, alg_jch1, alg_jch2,
-        alg_jch3, alg_jsh, alg_compare};
-	memcpy(state->analogDevices, analogDevices, sizeof(unsigned) * 10);
+	unsigned analogDevices[] = {alg_jch0, alg_jch1, alg_jch2, alg_jch3 };
+    
+    // yes yes save states and load states are still working
+    // though the format changed ...
+    
+    memcpy(state->analogDevices, analogDevices, sizeof(unsigned) * 4);
+    memcpy(state->alg_rsh, alg_rsh, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->alg_xsh, alg_xsh, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->alg_ysh, alg_ysh, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->alg_zsh, alg_zsh, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->alg_jsh, alg_jsh, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->sig_ramp, sig_ramp, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->sig_blank, sig_blank, sizeof(unsigned) * ALG_MAX_OFFSET);
+    memcpy(state->alg_compare, alg_compare, sizeof(unsigned) * ALG_MAX_OFFSET);
 	
-	long analogAlg[] = {alg_dx, alg_dy, alg_curr_x, alg_curr_y};
-	memcpy(state->analogAlg, analogAlg, sizeof(long) * 4);
-	
+	long analogAlg[] = {alg_curr_x, alg_curr_y};
+	memcpy(state->analogAlg, analogAlg, sizeof(long) * 2);
+    memcpy(state->alg_dx, alg_dx, sizeof(long) * ALG_MAX_OFFSET);
+    memcpy(state->alg_dy, alg_dy, sizeof(long) * ALG_MAX_OFFSET);
+    
+    
 	state->algVectoring = alg_vectoring;
 	
 	long vectorPoints[] = {alg_vector_x0, alg_vector_y0, alg_vector_x1, alg_vector_y1,
         alg_vector_dx, alg_vector_dy};
 	memcpy(state->vectorPoints, vectorPoints, sizeof(long) * 6);
 	
-	state->vecColor = alg_vector_color;
+    memcpy(state->vecColor, alg_vector_color, sizeof(unsigned char) * ALG_MAX_OFFSET);
 	
 	long vecDrawInfo[] = {vector_draw_cnt, vector_erse_cnt};
 	memcpy(state->vecDrawInfo, vecDrawInfo, sizeof(long) * 2);
 	
+    memcpy(state->alg_config, alg_config, sizeof(int) * ALG_SIZE);
+    memcpy(state->alg_read_positions, alg_read_positions, sizeof(int) * ALG_SIZE);
+    memcpy(state->alg_used_offsets, alg_used_offsets, sizeof(int) * ALG_SIZE);
+    
 	return state;
 }
 
@@ -155,32 +313,45 @@ void loadVecxState(VECXState *state) {
 	via_cb2h = (state->viaRegs)[23];
 	via_cb2s = (state->viaRegs)[24];
 	
-	alg_rsh = (state->analogDevices)[0];
-	alg_xsh = (state->analogDevices)[1];
-	alg_ysh = (state->analogDevices)[2];
-	alg_zsh = (state->analogDevices)[3];
-	alg_jch0 = (state->analogDevices)[4];
-	alg_jch1 = (state->analogDevices)[5];
-	alg_jch2 = (state->analogDevices)[6];
-	alg_jch3 = (state->analogDevices)[7];
-	alg_jsh = (state->analogDevices)[8];
-	alg_compare = (state->analogDevices)[9];
+    alg_jch0 = (state->analogDevices)[0];
+    alg_jch1 = (state->analogDevices)[1];
+    alg_jch2 = (state->analogDevices)[2];
+    alg_jch3 = (state->analogDevices)[3];
+
+    alg_curr_x = (state->analogAlg)[0];
+    alg_curr_y = (state->analogAlg)[1];
+    
+    alg_vectoring = state->algVectoring;
+    
+    alg_vector_x0 = (state->vectorPoints)[0];
+    alg_vector_y0 = (state->vectorPoints)[1];
+    alg_vector_x1 = (state->vectorPoints)[2];
+    alg_vector_y1 = (state->vectorPoints)[3];
+    alg_vector_dx = (state->vectorPoints)[4];
+    alg_vector_dy = (state->vectorPoints)[5];
+
+    for (int i=0; i<ALG_MAX_OFFSET; i++) {
+        alg_rsh[i] = (state->alg_rsh)[i];
+        alg_xsh[i] = (state->alg_xsh)[i];
+        alg_ysh[i] = (state->alg_ysh)[i];
+        alg_zsh[i] = (state->alg_zsh)[i];
+        alg_jsh[i] = (state->alg_jsh)[i];
+        alg_compare[i] = (state->alg_compare)[i];
+        
+        alg_dx[i] = (state->alg_dx)[i];
+        alg_dy[i] = (state->alg_dy)[i];
+        sig_ramp[i] = (state->sig_ramp)[i];
+        sig_blank[i] = (state->sig_blank)[i];
+
+        alg_vector_color[i] = state->vecColor[i];
+    }
+
+    memcpy(alg_config, state->alg_config, sizeof(int) * ALG_SIZE);
+    memcpy(alg_read_positions, state->alg_read_positions, sizeof(int) * ALG_SIZE);
+    memcpy(alg_used_offsets, state->alg_used_offsets, sizeof(int) * ALG_SIZE);
+    
 	
-	alg_dx = (state->analogAlg)[0];
-	alg_dy = (state->analogAlg)[1];
-	alg_curr_x = (state->analogAlg)[2];
-	alg_curr_y = (state->analogAlg)[3];
 	
-	alg_vectoring = state->algVectoring;
-	
-	alg_vector_x0 = (state->vectorPoints)[0];
-	alg_vector_y0 = (state->vectorPoints)[1];
-	alg_vector_x1 = (state->vectorPoints)[2];
-	alg_vector_y1 = (state->vectorPoints)[3];
-	alg_vector_dx = (state->vectorPoints)[4];
-	alg_vector_dy = (state->vectorPoints)[5];
-	
-	alg_vector_color = state->vecColor;
 	
 	vector_draw_cnt = (state->vecDrawInfo)[0];
 	vector_erse_cnt = (state->vecDrawInfo)[1];
@@ -223,55 +394,56 @@ static einline void alg_update (void)
 {
 	switch (via_orb & 0x06) {
 	case 0x00:
-		alg_jsh = alg_jch0;
+		set_alg_jsh(alg_jch0);
 
 		if ((via_orb & 0x01) == 0x00) {
 			/* demultiplexor is on */
-			alg_ysh = alg_xsh;
+			set_alg_ysh(getDirect_alg_xsh());
 		}
 
 		break;
 	case 0x02:
-		alg_jsh = alg_jch1;
+        set_alg_jsh(alg_jch1);
 
 		if ((via_orb & 0x01) == 0x00) {
 			/* demultiplexor is on */
-			alg_rsh = alg_xsh;
+			set_alg_rsh(getDirect_alg_xsh());
 		}
 
 		break;
 	case 0x04:
-		alg_jsh = alg_jch2;
+        set_alg_jsh(alg_jch2);
 
 		if ((via_orb & 0x01) == 0x00) {
 			/* demultiplexor is on */
 
-			if (alg_xsh > 0x80) {
-				alg_zsh = alg_xsh - 0x80;
+			if (getDirect_alg_xsh() > 0x80)
+            {
+				set_alg_zsh(getDirect_alg_xsh() - 0x80);
 			} else {
-				alg_zsh = 0;
+				set_alg_zsh(0);
 			}
 		}
 
 		break;
 	case 0x06:
 		/* sound output line */
-		alg_jsh = alg_jch3;
+        set_alg_jsh(alg_jch3);
 		break;
 	}
 
 	/* compare the current joystick direction with a reference */
 
-	if (alg_jsh > alg_xsh) {
-		alg_compare = 0x20;
+	if (getDirect_alg_jsh() > getDirect_alg_xsh()) {
+		set_alg_compare (0x20);
 	} else {
-		alg_compare = 0;
+        set_alg_compare (0);
 	}
 
 	/* compute the new "deltas" */
 
-	alg_dx = (long) alg_xsh - (long) alg_rsh;
-	alg_dy = (long) alg_rsh - (long) alg_ysh;
+	set_alg_dx((long) get_alg_xsh() - (long) get_alg_rsh());
+	set_alg_dy((long) get_alg_rsh() - (long) get_alg_ysh());
 }
 
 /* update IRQ and bit-7 of the ifr register after making an adjustment to
@@ -312,11 +484,11 @@ unsigned char read8 (unsigned address)
 				if (via_acr & 0x80) {
 					/* timer 1 has control of bit 7 */
 
-					data = (unsigned char) ((via_orb & 0x5f) | via_t1pb7 | alg_compare);
+					data = (unsigned char) ((via_orb & 0x5f) | via_t1pb7 | get_alg_compare());
 				} else {
 					/* bit 7 is being driven by via_orb */
 
-					data = (unsigned char) ((via_orb & 0xdf) | alg_compare);
+					data = (unsigned char) ((via_orb & 0xdf) | get_alg_compare());
 				}
 
 				break;
@@ -484,7 +656,7 @@ void write8 (unsigned address, unsigned char data)
 				 * feeds the x axis sample and hold.
 				 */
 
-				alg_xsh = data ^ 0x80;
+				set_alg_xsh(data ^ 0x80);
 
 				alg_update ();
 
@@ -657,20 +829,34 @@ void vecx_reset (void)
 	via_cb2h = 1;
 	via_cb2s = 0;
 
-	alg_rsh = 128;
-	alg_xsh = 128;
-	alg_ysh = 128;
-	alg_zsh = 0;
 	alg_jch0 = 128;
 	alg_jch1 = 128;
 	alg_jch2 = 128;
 	alg_jch3 = 128;
-	alg_jsh = 128;
+    
+    
+    for (int i=0; i<ALG_MAX_OFFSET; i++) {
+        alg_rsh[i] = 128;
+        alg_xsh[i] = 128;
+        alg_ysh[i] = 128;
+        alg_zsh[i] = 0;
+        alg_jsh[i] = 128;
 
-	alg_compare = 0; /* check this */
+        alg_compare[i] = 0; /* check this */
+        
+        alg_dx[i] = 0;
+        alg_dy[i] = 0;
+ 
+        sig_ramp[i] = 0;
+        sig_blank[i] = 0;
+        
+//        alg_vector_color[i] = state->vecColor[i];
+    }
 
-	alg_dx = 0;
-	alg_dy = 0;
+    
+    
+    
+    
 	alg_curr_x = ALG_MAX_X / 2;
 	alg_curr_y = ALG_MAX_Y / 2;
 
@@ -901,16 +1087,14 @@ static einline void alg_addline (long x0, long y0, long x1, long y1, unsigned ch
 static einline void alg_sstep (void)
 {
 	long sig_dx, sig_dy;
-	unsigned sig_ramp;
-	unsigned sig_blank;
 
 	if ((via_acr & 0x10) == 0x10) {
-		sig_blank = via_cb2s;
+		set_sig_blank(via_cb2s);
 	} else {
-		sig_blank = via_cb2h;
+		set_sig_blank(via_cb2h);
 	}
 
-	if (via_ca2 == 0) {
+    if (via_ca2 == 0) {
 		/* need to force the current point to the 'orgin' so just
 		 * calculate distance to origin and use that as dx,dy.
 		 */
@@ -919,14 +1103,14 @@ static einline void alg_sstep (void)
 		sig_dy = ALG_MAX_Y / 2 - alg_curr_y;
 	} else {
 		if (via_acr & 0x80) {
-			sig_ramp = via_t1pb7;
+			set_sig_ramp(via_t1pb7);
 		} else {
-			sig_ramp = via_orb & 0x80;
+			set_sig_ramp(via_orb & 0x80);
 		}
 
-		if (sig_ramp == 0) {
-			sig_dx = alg_dx;
-			sig_dy = alg_dy;
+		if (get_sig_ramp() == 0) {
+			sig_dx = get_alg_dx();
+			sig_dy = get_alg_dy();
 		} else {
 			sig_dx = 0;
 			sig_dy = 0;
@@ -934,7 +1118,7 @@ static einline void alg_sstep (void)
 	}
 
 	if (alg_vectoring == 0) {
-		if (sig_blank == 1 &&
+		if (get_sig_blank() == 1 &&
 			alg_curr_x >= 0 && alg_curr_x < ALG_MAX_X &&
 			alg_curr_y >= 0 && alg_curr_y < ALG_MAX_Y) {
 
@@ -947,12 +1131,12 @@ static einline void alg_sstep (void)
 			alg_vector_y1 = alg_curr_y;
 			alg_vector_dx = sig_dx;
 			alg_vector_dy = sig_dy;
-			alg_vector_color = (unsigned char) alg_zsh;
+/* ACHTUNG*/ set_alg_vector_color((unsigned char) get_alg_zsh());
 		}
 	} else {
 		/* already drawing a vector ... check if we need to turn it off */
 
-		if (sig_blank == 0) {
+		if (get_sig_blank() == 0) {
 			/* blank just went on, vectoring turns off, and we've got a
 			 * new line.
 			 */
@@ -961,10 +1145,10 @@ static einline void alg_sstep (void)
 
 			alg_addline (alg_vector_x0, alg_vector_y0,
 						 alg_vector_x1, alg_vector_y1,
-						 alg_vector_color);
+						 getDirect_alg_vector_color());
 		} else if (sig_dx != alg_vector_dx ||
 				   sig_dy != alg_vector_dy ||
-				   (unsigned char) alg_zsh != alg_vector_color) {
+/* ACHTUNG*/				   ((unsigned char) get_alg_zsh()) != get_alg_vector_color()) {
 
 			/* the parameters of the vectoring processing has changed.
 			 * so end the current line.
@@ -972,7 +1156,7 @@ static einline void alg_sstep (void)
 
 			alg_addline (alg_vector_x0, alg_vector_y0,
 						 alg_vector_x1, alg_vector_y1,
-						 alg_vector_color);
+						 get_alg_vector_color());
 
 			/* we continue vectoring with a new set of parameters if the
 			 * current point is not out of limits.
@@ -986,7 +1170,7 @@ static einline void alg_sstep (void)
 				alg_vector_y1 = alg_curr_y;
 				alg_vector_dx = sig_dx;
 				alg_vector_dy = sig_dy;
-				alg_vector_color = (unsigned char) alg_zsh;
+/* ACHTUNG*/				set_alg_vector_color((unsigned char) get_alg_zsh());
 			} else {
 				alg_vectoring = 0;
 			}
@@ -1007,7 +1191,30 @@ static einline void alg_sstep (void)
 		alg_vector_x1 = alg_curr_x;
 		alg_vector_y1 = alg_curr_y;
 	}
+    
 }
+void alg_oneStepHead()
+{
+    oneStepAheadUnsigned(alg_rsh, ZSH_DIRECT);
+    oneStepAheadUnsigned(alg_xsh, X_DIRECT);
+    oneStepAheadUnsigned(alg_zsh, Z_DIRECT);
+    oneStepAheadUnsigned(alg_ysh, Y_DIRECT);
+    oneStepAheadUnsigned(alg_jsh, JOY_DIRECT);
+    oneStepAheadUnsigned(alg_jsh, COMP_DIRECT);
+    oneStepAheadUnsigned(alg_compare, COMP_DIRECT);
+    oneStepAheadLong(alg_dx, DX_DIRECT);
+    oneStepAheadLong(alg_dy, DY_DIRECT);
+    oneStepAheadUChar(alg_vector_color, COL_DIRECT);
+
+    oneStepAheadUnsigned(sig_ramp, RAMP_DIRECT);
+    oneStepAheadUnsigned(sig_blank, BLANK_DIRECT);
+
+    
+    for (int i=0; i<ALG_SIZE; i++)
+        alg_read_positions[i] = ((alg_read_positions[i]+1)%ALG_MAX_OFFSET);
+    
+}
+
 
 void vecx_emu (long cycles, int ahead)
 {
@@ -1017,9 +1224,15 @@ void vecx_emu (long cycles, int ahead)
 		icycles = e6809_sstep (via_ifr & 0x80, 0);
 
 		for (c = 0; c < icycles; c++) {
+            alg_update ();
 			via_sstep0 ();
+            alg_update ();
 			alg_sstep ();
+            
+            alg_update ();
 			via_sstep1 ();
+            
+            alg_oneStepHead();
 		}
 
 		cycles -= (long) icycles;
