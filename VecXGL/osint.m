@@ -290,21 +290,39 @@ void osint_btnDown(OEVectrexButton btn) {
     switch(btn) {
         case OEVectrexButton1:
             snd_regs[14] &= ~0x01;
+#ifdef ALG_DEBUG
+            incOffset();
+#endif
             break;
         case OEVectrexButton2:
             snd_regs[14] &= ~0x02;
+#ifdef ALG_DEBUG
+            decOffset();
+#endif
             break;
         case OEVectrexButton3:
             snd_regs[14] &= ~0x04;
+#ifdef ALG_DEBUG
+            alg_print();
+#endif
             break;
         case OEVectrexButton4:
             snd_regs[14] &= ~0x08;
+#ifdef ALG_DEBUG
+            change();
+#endif
             break;
         case OEVectrexAnalogUp:
             alg_jch1 = 0xFF;
+#ifdef ALG_DEBUG
+            alg_next();
+#endif
             break;
         case OEVectrexAnalogDown:
             alg_jch1 = 0x00;
+#ifdef ALG_DEBUG
+            alg_prev();
+#endif
             break;
         case OEVectrexAnalogLeft:
             alg_jch0 = 0x00;
