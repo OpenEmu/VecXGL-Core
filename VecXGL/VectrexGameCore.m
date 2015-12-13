@@ -68,7 +68,7 @@ VectrexGameCore *g_core;
     return YES;
 }
 
-- (void)executeFrameSkippingFrame:(BOOL)skip
+- (void)executeFrame
 {
     // late init of the overlay
 
@@ -82,11 +82,6 @@ VectrexGameCore *g_core;
 
     vecx_emu ((VECTREX_MHZ / 1000) * EMU_TIMER, 0);
     glFlush();
-}
-
-- (void)executeFrame
-{
-    [self executeFrameSkippingFrame:NO];
 }
 
 - (void)startEmulation
@@ -116,52 +111,35 @@ VectrexGameCore *g_core;
     vecx_reset();
 }
 
-- (BOOL)saveStateToFileAtPath:(NSString *)fileName
+- (void)saveStateToFileAtPath:(NSString *)fileName completionHandler:(void (^)(BOOL, NSError *))block
 {
-    FILE *saveFile = fopen([fileName UTF8String], "wb");
-    
     VECXState *state = saveVecxState();
-    
-    long bytesWritten = fwrite(state, sizeof(char), sizeof(VECXState), saveFile);
-    
-    if(bytesWritten != sizeof(VECXState))
-    {
-        NSLog(@"Couldn't write state");
-        return NO;
-    }
-    
-    fclose(saveFile);
-    
-    free(state);
-    
-    return YES;
+    NSData *data = [NSData dataWithBytesNoCopy:state length:sizeof(VECXState) freeWhenDone:YES];
+
+    NSError *error;
+    BOOL succeeded = [data writeToFile:fileName options:0 error:&error];
+    block(succeeded, error);
 }
 
-- (BOOL)loadStateFromFileAtPath:(NSString *)fileName
+- (void)loadStateFromFileAtPath:(NSString *)fileName completionHandler:(void (^)(BOOL, NSError *))block
 {
-    FILE *saveFile = fopen([fileName UTF8String], "rb");
-    
-    if(saveFile == NULL)
-    {
-        NSLog(@"Could not open state file");
-        return NO;
+    NSError *error;
+    NSMutableData *data = [NSMutableData dataWithContentsOfFile:fileName options:0 error:&error];
+
+    if (!data) {
+        block(NO, error);
+        return;
     }
-    
-    VECXState *state = malloc(sizeof(VECXState));
-    
-    if(!fread(state, sizeof(char), sizeof(VECXState), saveFile))
-    {
-        NSLog(@"Couldn't read file");
-        return NO;
+
+    if (sizeof(VECXState) != data.length) {
+        block(NO, [NSError errorWithDomain:OEGameCoreErrorDomain code:OEGameCoreCouldNotLoadStateError userInfo:@{
+            NSLocalizedFailureReasonErrorKey: @"THe size of the saved file is different from the size of the state.",
+        }]);
+        return;
     }
-    
-    fclose(saveFile);
-    
+
+    VECXState *state = (void *)data.bytes;
     loadVecxState(state);
-    
-    free(state);
-    
-    return YES;
 }
 
 - (OEIntSize)aspectSize
