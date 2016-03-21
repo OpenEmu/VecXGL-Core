@@ -86,18 +86,17 @@ VectrexGameCore *g_core;
 
 - (void)startEmulation
 {
-    if(!isRunning)
-    {
-        [super startEmulation];
-        vecx_reset();
+    if(self.rate != 0) return;
 
-        NSFileManager *defaultFileManager = [NSFileManager defaultManager];
-        if ([defaultFileManager fileExistsAtPath:[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"]])
-        {
-            // Too early to load overlay, the context is not ready
-            //load_overlay((char *)[[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"] UTF8String]);
-            overlayFile = [[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"];
-        }
+    [super startEmulation];
+    vecx_reset();
+
+    NSFileManager *defaultFileManager = [NSFileManager defaultManager];
+    if ([defaultFileManager fileExistsAtPath:[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"]])
+    {
+        // Too early to load overlay, the context is not ready
+        //load_overlay((char *)[[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"] UTF8String]);
+        overlayFile = [[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"];
     }
 }
 
