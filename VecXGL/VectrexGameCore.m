@@ -63,7 +63,7 @@ VectrexGameCore *g_core;
 {
     romPath = path;
     osint_defaults();           //setup defaults including sound buffer
-    openCart([path UTF8String]);
+    openCart(path.fileSystemRepresentation);
     osint_gencolors();          //setup colors
     return YES;
 }
@@ -76,7 +76,7 @@ VectrexGameCore *g_core;
     if (![overlayFile isEqualToString:@""] && !overlayIsLoaded)
     //if (![overlayFile isEqualToString:@""] && !overlayIsLoaded)
     {
-        load_overlay((char *)[overlayFile UTF8String]);
+        load_overlay((char *)overlayFile.fileSystemRepresentation);
         overlayIsLoaded = YES;
     }
 
@@ -95,7 +95,7 @@ VectrexGameCore *g_core;
     if ([defaultFileManager fileExistsAtPath:[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"]])
     {
         // Too early to load overlay, the context is not ready
-        //load_overlay((char *)[[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"] UTF8String]);
+        //load_overlay((char *)[[[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"] fileSystemRepresentation]);
         overlayFile = [[romPath stringByDeletingPathExtension] stringByAppendingString:@".tga"];
     }
 }
