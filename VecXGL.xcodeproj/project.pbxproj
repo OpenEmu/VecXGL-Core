@@ -97,6 +97,7 @@
 				986F323416D3FF4F00BB38E2 /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		986F323416D3FF4F00BB38E2 /* Products */ = {
 			isa = PBXGroup;
@@ -200,7 +201,7 @@
 			};
 			buildConfigurationList = 986F322E16D3FF4F00BB38E2 /* Build configuration list for PBXProject "VecXGL" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,

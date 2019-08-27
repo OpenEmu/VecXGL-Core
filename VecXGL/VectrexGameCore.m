@@ -102,7 +102,7 @@ VectrexGameCore *g_core;
 
 - (void)updateSound:(uint8_t *)buff len:(int)len
 {
-    [[g_core ringBufferAtIndex:0] write:buff maxLength:len];
+    [[g_core audioBufferAtIndex:0] write:buff maxLength:len];
 }
 
 - (void)resetEmulation
@@ -156,9 +156,9 @@ VectrexGameCore *g_core;
     return OEIntSizeMake(videoWidth, videoHeight);
 }
 
-- (BOOL)rendersToOpenGL
+- (OEGameCoreRendering)gameCoreRendering
 {
-    return YES;
+    return OEGameCoreRenderingOpenGL2Video;
 }
 
 - (const void *)videoBuffer
