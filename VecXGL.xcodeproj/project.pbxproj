@@ -46,7 +46,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		98150A8316D412E90085EBA2 /* OpenEmuBase.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenEmuBase.framework; path = "../../../../Library/Developer/Xcode/DerivedData/OpenEmu-bhfveylavlxwbkddelpdvazebykd/Build/Products/Debug/OpenEmuBase.framework"; sourceTree = "<group>"; };
+		98150A8316D412E90085EBA2 /* OpenEmuBase.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenEmuBase.framework; path = "OpenEmuBase.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
 		982C135E17153B1500E47845 /* e8910.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = e8910.c; sourceTree = "<group>"; };
 		982C135F17153B1500E47845 /* e8910.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = e8910.h; sourceTree = "<group>"; };
 		986F323316D3FF4F00BB38E2 /* VecXGL.oecoreplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VecXGL.oecoreplugin; sourceTree = BUILT_PRODUCTS_DIR; };
