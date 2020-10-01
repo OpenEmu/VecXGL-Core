@@ -72,7 +72,7 @@
 		986F327C16D40A9100BB38E2 /* vecx.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = vecx.m; sourceTree = "<group>"; };
 		986F327D16D40A9100BB38E2 /* vecx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vecx.h; sourceTree = "<group>"; };
 		986F327E16D40A9100BB38E2 /* wnoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wnoise.h; sourceTree = "<group>"; };
-		98EFD838170B4D4E00E4C50D /* OEVectrexSystemResponderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OEVectrexSystemResponderClient.h; path = ../../OpenEmu/Vectrex/OEVectrexSystemResponderClient.h; sourceTree = "<group>"; };
+		98EFD838170B4D4E00E4C50D /* OEVectrexSystemResponderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OEVectrexSystemResponderClient.h; path = ../../OpenEmu/SystemPlugins/Vectrex/OEVectrexSystemResponderClient.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
