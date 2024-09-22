@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include "e6809.h"
 #include "e8910.h"
 #include "vecx.h"
